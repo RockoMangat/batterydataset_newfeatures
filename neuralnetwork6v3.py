@@ -14,12 +14,14 @@ from sklearn.feature_selection import f_regression
 from matplotlib import pyplot
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.feature_selection import r_regression, SelectKBest
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import LinearRegression
 
 
 
 
 # pklfiles = ['frames.pkl', 'frames2.pkl', 'frames3.pkl']
-pklfiles = ['dataset1.pkl', 'dataset2.pkl', 'dataset3.pkl', 'dataset4.pkl']
+pklfiles = ['dataset1.pkl', 'dataset2.pkl', 'dataset4.pkl', 'dataset3.pkl']
 frames = []
 
 for filename in pklfiles:
@@ -78,7 +80,10 @@ print('Shape before:', dfcomb_final.shape)
 
 
 # deleting certain columns/features from dataset to see if it has an impact on the model
-# dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[9]], axis=1)
+# dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 8, 9, 13, 15]], axis=1)
+dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 12, 13, 15]], axis=1)
+# dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[6, 7, 8, 9, 16]], axis=1)
+
 
 print('No. NaN values: ', dfcomb_final.isnull().sum().sum())
 
@@ -105,8 +110,8 @@ dfcomb_final = pd.DataFrame(dfcomb_final_scaled, columns=col_names, index=row_nu
 #                                               get the x and y data:
 
 # get three different dataframes and randomise order of rows
-df_training = dfcomb_final[:-167]
-df_test = dfcomb_final.tail(167)
+df_training = dfcomb_final[:-158]
+df_test = dfcomb_final.tail(158)
 
 
 df_training = df_training.sample(frac=1, random_state=22)
@@ -151,24 +156,17 @@ pyplot.show()
 
 # SECOND METHOD - https://neptune.ai/blog/feature-selection-methods
 
-X_selection = SelectKBest(r_regression, k=3).fit_transform(X_train, y_train)
+# X_selection = SelectKBest(r_regression, k=3).fit_transform(X_train, y_train)
 
+# ridge regression:
+lr = LinearRegression().fit(X_train, y_train)
 
+print(f"Linear Regression-Training set score: {lr.score(X_train, y_train):.2f}")
+print(f"Linear Regression-Test set score: {lr.score(X_test, y_test):.2f}")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ridge = Ridge(alpha=0.7).fit(X_train, y_train)
+print(f"Ridge Regression-Training set score: {ridge.score(X_train, y_train):.2f}")
+print(f"Ridge Regression-Test set score: {ridge.score(X_test, y_test):.2f}")
 
 
 # ------------------------- Neural network ------------------------- #
@@ -205,6 +203,33 @@ class MyModule(nn.Module):
         return pred
 
 
+# class MyModule(nn.Module):
+#     # Initialize the parameters
+#     def __init__(self, num_inputs, num_outputs, hidden_size):
+#         super(MyModule, self).__init__()
+#         self.dropout = nn.Dropout(0.25)
+#         self.linear1 = nn.Linear(num_inputs, hidden_size)
+#         self.linear2 = nn.Linear(hidden_size, hidden_size)
+#         self.linear3 = nn.Linear(hidden_size, num_outputs)
+#
+#         self.activation = nn.ReLU()
+#
+#     # Forward pass
+#     def forward(self, input):
+#         input = self.dropout(input)
+#         lin1 = self.linear1(input)
+#         output1 = self.activation(lin1)
+#         output1 = self.dropout(output1)
+#
+#         lin2 = self.linear2(output1)
+#         # pred = self.linear3(output1)
+#         output2 = self.activation(lin2)
+#         output2 = self.dropout(output2)
+#
+#         pred = self.linear3(output2)
+#         return pred
+
+
 # Instantiate the custom module
 # 6 inputs (from the features), one output (SOH) and hidden size is 19 neurons
 model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=1)
@@ -216,8 +241,8 @@ model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128
 # criterion = torch.nn.MSELoss(size_average=False)
 loss_fn = torch.nn.MSELoss()
 
-# optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+# optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-2)
 
 
 # convert to pytorch tensors:
@@ -256,7 +281,7 @@ for batch, (X, y) in enumerate(train_dataloader):
 
 
 # Training model test:
-num_epochs = 500
+num_epochs = 300
 training_losses = []
 validation_losses = []
 
@@ -331,16 +356,17 @@ plt.legend()
 with open('dfcomb_final.pkl', 'rb') as handle:
     dfcomb_final = pickle.load(handle)
 
-# # get results back in correct order
-# df_test = dfcomb_final.tail(167)
-#
-# # rewriting X_test and y_test to get original data before shuffling
-# X_test = df_test.drop('Average SOH', axis=1)
-# y_test = df_test['Average SOH']
+# Split dataset into 4, for each
 
-# .tail(167)
+# B5cycle = df3.index
+# B5charge = df3['SOH discharge 2']
 
-# plt.scatter(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH')
+# B5cycle = dfcomb_final.head(167).index
+# B5charge = dfcomb_final.head(167)['Average SOH']
+
+# plt.scatter(B5cycle, B5charge, label='True SOH', s=20)
+
+# plt.scatter(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH', s=15)
 plt.scatter(dfcomb_final.tail(167).index, dfcomb_final.tail(167)['Average SOH'], label='True SOH', s=20)
 
 plt.legend()

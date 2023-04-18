@@ -129,11 +129,6 @@ def charge_data(dataset):
 
 
 
-
-
-
-
-
         # voltage increment in fixed time: find index of value around generic time of 1000s
         # print('Closest time: ', time[i][find_nearest(time[i], value = 1000)])
         # print('Closest voltage: ', charge_CC_voltage[i][find_nearest(time[i], value = 1000)])

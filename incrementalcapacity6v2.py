@@ -273,6 +273,17 @@ def ica_data(dataset):
     del cycles_to_loop[60]
 
 
+    if dataset == 3:
+        del maxica[7]
+        del maxica[52-1]
+
+        del cycles_to_loop[7]
+        del cycles_to_loop[52-1]
+
+        del peakvolt[7]
+        del peakvolt[52-1]
+
+
     maxica_np = np.array(maxica)
 
     # Reshape the array to have two dimensions
