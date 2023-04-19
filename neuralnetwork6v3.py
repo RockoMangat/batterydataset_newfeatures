@@ -21,7 +21,7 @@ from sklearn.linear_model import LinearRegression
 
 
 # pklfiles = ['frames.pkl', 'frames2.pkl', 'frames3.pkl']
-pklfiles = ['dataset1.pkl', 'dataset2.pkl', 'dataset4.pkl', 'dataset3.pkl']
+pklfiles = ['dataset1.pkl', 'dataset2.pkl', 'dataset3.pkl', 'dataset4.pkl']
 frames = []
 
 for filename in pklfiles:
@@ -242,7 +242,8 @@ model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128
 loss_fn = torch.nn.MSELoss()
 
 # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-2)
+# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-2)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 
 # convert to pytorch tensors:
@@ -345,7 +346,6 @@ unnormalized_val_results = val_results * soh_range + soh_min
 
 print(X_test.index, unnormalized_val_results)
 plt.figure(2)
-# plt.plot(X_test.index, val_results, label='Predicted SOH')
 plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH', s=10)
 plt.xlabel('Cycle Number')
 plt.ylabel('SOH')
@@ -368,6 +368,9 @@ with open('dfcomb_final.pkl', 'rb') as handle:
 
 # plt.scatter(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH', s=15)
 plt.scatter(dfcomb_final.tail(167).index, dfcomb_final.tail(167)['Average SOH'], label='True SOH', s=20)
+
+# plt.figure(2)
+# plt.plot(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH')
 
 plt.legend()
 
