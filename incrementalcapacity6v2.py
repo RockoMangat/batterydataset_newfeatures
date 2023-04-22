@@ -273,6 +273,14 @@ def ica_data(dataset):
     del cycles_to_loop[60]
 
 
+    if dataset == 2:
+        del maxica[53]
+
+        del cycles_to_loop[53]
+
+        del peakvolt[53]
+
+
     if dataset == 3:
         del maxica[7]
         del maxica[52-1]
@@ -297,7 +305,7 @@ def ica_data(dataset):
     plt.figure(4)
     plt.plot(cycles_to_loop, nd3)
     plt.xlabel('Cycle')
-    plt.ylabel('Normalised Feature peak test')
+    plt.ylabel('Normalised Feature peak ICA test')
     # plt.show()
 
 
