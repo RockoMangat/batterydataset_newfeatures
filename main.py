@@ -8,7 +8,7 @@ from U_av_discharge_CC2 import discharge_data
 from incrementalcapacity6v2 import ica_data
 
 # select dataset: 0, 1, 2 or 3
-datasetno = 3
+datasetno = 0
 
 # ------------------ Get the av charge voltage ------------------ #
 result = charge_data(datasetno)
@@ -73,7 +73,7 @@ df3.columns = ['Av volt discharge', 'Max temp', 'Max temp time', 'SOH discharge 
 frames = [df1, df2, df3]
 
 
-with open('dataset4.pkl', 'wb') as handle:
+with open('dataset1.pkl', 'wb') as handle:
     pickle.dump(frames, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 print('hello')

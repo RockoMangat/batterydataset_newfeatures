@@ -84,7 +84,10 @@ def sohdischarge(dataset):
 
         print((truecapacity.values()))
         print('Total capacity: ', sum(truecapacity.values()))
-        ab.append(sum(truecapacity.values()) / fullcapacity)
+        # added in the below two lines to see how it works using the RECORDED capacity by NASA
+        recordedcapacity = column[8][0]
+        ab.append(recordedcapacity / fullcapacity)
+        # ab.append(sum(truecapacity.values()) / fullcapacity)
 
     ## apply below if above 101% SOH - removing anomalies
     while True:

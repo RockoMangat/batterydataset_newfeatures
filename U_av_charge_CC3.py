@@ -141,11 +141,11 @@ def charge_data(dataset):
 
 
 
-    # average time taken to charge
+    # average time taken to charge - NOT used
     t_av = sum(chargetime)/len(chargetime)
     print('Average time for all cycles (charge): ', t_av)
 
-    # Average voltage increment in fixed time
+    # Average voltage increment in fixed time - NOT used
     deltau_av = sum(fixedtime)/len(fixedtime)
     print('Average voltage increment in fixed time: ', deltau_av)
 
@@ -186,6 +186,10 @@ def charge_data(dataset):
             del area3[val]
             del area4[val]
 
+    if dataset == 2:
+        del chargetime[11]
+        del cc[11]
+
 
 
     # Create numpy array of data
@@ -205,7 +209,7 @@ def charge_data(dataset):
     plt.figure(2)
     plt.plot(cc, nd)
     plt.xlabel('Cycle')
-    plt.ylabel('Normalised Feature 3')
+    plt.ylabel('Time taken for charge normalised')
     plt.show()
 
     # return average charge voltage, charge time, fixed time and cycles used for

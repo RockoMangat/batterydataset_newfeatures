@@ -50,6 +50,8 @@ def discharge_data(dataset):
 
         plt.figure(1)
         plt.plot(time[i], temp[i])
+        plt.xlabel('Time (s)')
+        plt.ylabel('Temperature (°C)')
 
         # find max value of temperature
         maxtemp.append(max(temp[i]))

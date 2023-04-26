@@ -105,6 +105,9 @@ def sohcharge1(dataset):
     # remove index 11 (cycle 12) as it is an anomaly
     # del ab[60]
     # del charge_cycle[60]
+    if dataset == 0 or dataset == 1 or dataset == 2:
+        del ab[11]
+        del charge_cycle[11]
 
 
     print(ab)
@@ -112,6 +115,7 @@ def sohcharge1(dataset):
     ax = plt.plot(charge_cycle, ab)
     plt.xlabel('Cycle')
     plt.ylabel('SOH (%)')
+    plt.title('SOH charge (calculated)')
     plt.show()
 
     print('he')

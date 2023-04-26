@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage
 from sklearn.preprocessing import MinMaxScaler
+from scipy.signal import find_peaks
+import plotly.graph_objects as go
+from scipy.signal import argrelmax
 
 # import dataframes
 from pandas5v2 import load_df
@@ -43,6 +46,12 @@ def ica_data(dataset):
     idx = []
     index = []
     peakvolt = []
+
+    valpeak2_p1 = []
+    valpeak2_p2 = []
+    voltpeak2_1 = []
+    voltpeak2_2 = []
+
 
     # initialise variables
     t0 = 0
@@ -159,12 +168,148 @@ def ica_data(dataset):
             else:
                 # ax = plt.plot(discharge_CC_voltage[n][1:], inc_cap_smoothed[n], label=round(soh[n], 2))
                 ax = plt.plot(discharge_CC_voltage[n][1:], inc_cap_smoothed[n], label=n)
+                # ax = plt.plot(discharge_CC_voltage[n][1:], inc_cap[n].values(), label=n)
+                plt.xlabel('Terminal Voltage (V)')
+                plt.ylabel('Incremental Capacity (Ah/V)')
 
                 plt.legend()
 
                 maxica_filtered.append(max(inc_cap_smoothed[n]))
 
                 final_cycles.append(n)
+
+                # ----------------------
+
+                # find max value:
+                # ind_peaks = argrelmax(inc_cap_smoothed[n])
+                ind_peaks = np.asarray(argrelmax(inc_cap_smoothed[n]))
+
+                if len(ind_peaks[0])==2:
+
+                    valpeak2_p1.append(inc_cap_smoothed[n][ind_peaks[0]][0])
+                    valpeak2_p2.append(inc_cap_smoothed[n][ind_peaks[0]][1])
+
+                    voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][0]])
+                    voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][1]])
+
+
+                if len(ind_peaks[0])==3:
+                    #  get all three peaks found
+                    valpeak2_test1 = inc_cap_smoothed[n][ind_peaks[0]][0]
+                    valpeak2_test2 = inc_cap_smoothed[n][ind_peaks[0]][1]
+                    valpeak2_test3 = inc_cap_smoothed[n][ind_peaks[0]][2]
+
+                    # put all three peak values into list and select the max and min ones
+                    list1 = [valpeak2_test1, valpeak2_test2, valpeak2_test3]
+                    maxval = max(list1)
+                    minval = min(list1)
+
+                    # get the index for these values to use to get the voltage
+                    maxvalindex = list1.index(maxval)
+                    minvalindex = list1.index(minval)
+
+                    # append value into list to use later
+                    valpeak2_p1.append(maxval)
+                    valpeak2_p2.append(minval)
+
+                    voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][maxvalindex]])
+                    voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][minvalindex]])
+
+
+                    print('three values')
+
+                if len(ind_peaks[0]) == 4:
+                    #  get all FOUR peaks found
+                    valpeak2_test1 = inc_cap_smoothed[n][ind_peaks[0]][0]
+                    valpeak2_test2 = inc_cap_smoothed[n][ind_peaks[0]][1]
+                    valpeak2_test3 = inc_cap_smoothed[n][ind_peaks[0]][2]
+                    valpeak2_test4 = inc_cap_smoothed[n][ind_peaks[0]][3]
+
+
+                    # put all four peak values into list and select the max and min ones
+                    list1 = [valpeak2_test1, valpeak2_test2, valpeak2_test3, valpeak2_test4]
+                    maxval = max(list1)
+                    minval = min(list1)
+
+                    # get the index for these values to use to get the voltage
+                    maxvalindex = list1.index(maxval)
+                    minvalindex = list1.index(minval)
+
+                    # append value into list to use later
+                    valpeak2_p1.append(maxval)
+                    valpeak2_p2.append(minval)
+
+                    voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][maxvalindex]])
+                    voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][minvalindex]])
+
+                    print('four values')
+
+                if len(ind_peaks[0]) == 5:
+                    #  get all FIVE peaks found
+                    valpeak2_test1 = inc_cap_smoothed[n][ind_peaks[0]][0]
+                    valpeak2_test2 = inc_cap_smoothed[n][ind_peaks[0]][1]
+                    valpeak2_test3 = inc_cap_smoothed[n][ind_peaks[0]][2]
+                    valpeak2_test4 = inc_cap_smoothed[n][ind_peaks[0]][3]
+                    valpeak2_test5 = inc_cap_smoothed[n][ind_peaks[0]][4]
+
+
+
+                    # put all four peak values into list and select the max and min ones
+                    list1 = [valpeak2_test1, valpeak2_test2, valpeak2_test3, valpeak2_test4, valpeak2_test5]
+                    maxval = max(list1)
+                    minval = min(list1)
+
+                    # get the index for these values to use to get the voltage
+                    maxvalindex = list1.index(maxval)
+                    minvalindex = list1.index(minval)
+
+                    # append value into list to use later
+                    valpeak2_p1.append(maxval)
+                    valpeak2_p2.append(minval)
+
+                    voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][maxvalindex]])
+                    voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][minvalindex]])
+
+                    print('five values')
+
+
+
+
+                print('hello')
+
+
+                # finding peaks using plotly and scipy:
+                # indices = find_peaks(inc_cap_smoothed[n])
+                #
+                # fig = go.Figure(data=go.Scatter(
+                #     y=inc_cap_smoothed[n],
+                #     x=discharge_CC_voltage[n][1:],
+                #     mode='lines',
+                #     name='Original Plot'
+                # ))
+                #
+                # fig.add_trace(go.Scatter(
+                #     # x=discharge_CC_voltage[n][1:],
+                #     # y=[inc_cap_smoothed[n][j] for j in x],
+                #     x=indices,
+                #     y=[inc_cap_smoothed[n][j] for j in indices],
+                #     mode = 'markers',
+                #     marker = dict(
+                #         size=8,
+                #         color='red',
+                #         symbol='cross'
+                #     ),
+                #     name = 'Detected Peaks'
+                # ))
+                #
+                #
+                # fig.show()
+
+
+
+
+
+
 
 
 
@@ -229,6 +374,92 @@ def ica_data(dataset):
         # Final differences
         delta_u1.append( abs((centre - t_voltage1)) )
         delta_u2.append( abs(centre - t_voltage2) )
+
+        # # find max value:
+        # # ind_peaks = argrelmax(inc_cap_smoothed[n])
+        # ind_peaks = np.asarray(argrelmax(inc_cap_smoothed[n]))
+        #
+        # if len(ind_peaks[0]) == 2:
+        #     valpeak2_p1.append(inc_cap_smoothed[n][ind_peaks[0]][0])
+        #     valpeak2_p2.append(inc_cap_smoothed[n][ind_peaks[0]][1])
+        #
+        #     voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][0]])
+        #     voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][1]])
+        #
+        # if len(ind_peaks[0]) == 3:
+        #     #  get all three peaks found
+        #     valpeak2_test1 = inc_cap_smoothed[n][ind_peaks[0]][0]
+        #     valpeak2_test2 = inc_cap_smoothed[n][ind_peaks[0]][1]
+        #     valpeak2_test3 = inc_cap_smoothed[n][ind_peaks[0]][2]
+        #
+        #     # put all three peak values into list and select the max and min ones
+        #     list1 = [valpeak2_test1, valpeak2_test2, valpeak2_test3]
+        #     maxval = max(list1)
+        #     minval = min(list1)
+        #
+        #     # get the index for these values to use to get the voltage
+        #     maxvalindex = list1.index(maxval)
+        #     minvalindex = list1.index(minval)
+        #
+        #     # append value into list to use later
+        #     valpeak2_p1.append(maxval)
+        #     valpeak2_p2.append(minval)
+        #
+        #     voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][maxvalindex]])
+        #     voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][minvalindex]])
+        #
+        #     print('three values')
+        #
+        # if len(ind_peaks[0]) == 4:
+        #     #  get all FOUR peaks found
+        #     valpeak2_test1 = inc_cap_smoothed[n][ind_peaks[0]][0]
+        #     valpeak2_test2 = inc_cap_smoothed[n][ind_peaks[0]][1]
+        #     valpeak2_test3 = inc_cap_smoothed[n][ind_peaks[0]][2]
+        #     valpeak2_test4 = inc_cap_smoothed[n][ind_peaks[0]][3]
+        #
+        #     # put all four peak values into list and select the max and min ones
+        #     list1 = [valpeak2_test1, valpeak2_test2, valpeak2_test3, valpeak2_test4]
+        #     maxval = max(list1)
+        #     minval = min(list1)
+        #
+        #     # get the index for these values to use to get the voltage
+        #     maxvalindex = list1.index(maxval)
+        #     minvalindex = list1.index(minval)
+        #
+        #     # append value into list to use later
+        #     valpeak2_p1.append(maxval)
+        #     valpeak2_p2.append(minval)
+        #
+        #     voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][maxvalindex]])
+        #     voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][minvalindex]])
+        #
+        #     print('four values')
+        #
+        # if len(ind_peaks[0]) == 5:
+        #     #  get all FIVE peaks found
+        #     valpeak2_test1 = inc_cap_smoothed[n][ind_peaks[0]][0]
+        #     valpeak2_test2 = inc_cap_smoothed[n][ind_peaks[0]][1]
+        #     valpeak2_test3 = inc_cap_smoothed[n][ind_peaks[0]][2]
+        #     valpeak2_test4 = inc_cap_smoothed[n][ind_peaks[0]][3]
+        #     valpeak2_test5 = inc_cap_smoothed[n][ind_peaks[0]][4]
+        #
+        #     # put all four peak values into list and select the max and min ones
+        #     list1 = [valpeak2_test1, valpeak2_test2, valpeak2_test3, valpeak2_test4, valpeak2_test5]
+        #     maxval = max(list1)
+        #     minval = min(list1)
+        #
+        #     # get the index for these values to use to get the voltage
+        #     maxvalindex = list1.index(maxval)
+        #     minvalindex = list1.index(minval)
+        #
+        #     # append value into list to use later
+        #     valpeak2_p1.append(maxval)
+        #     valpeak2_p2.append(minval)
+        #
+        #     voltpeak2_1.append(discharge_CC_voltage[n][ind_peaks[0][maxvalindex]])
+        #     voltpeak2_2.append(discharge_CC_voltage[n][ind_peaks[0][minvalindex]])
+        #
+        #     print('five values')
 
 
     print(delta_u1)
@@ -339,6 +570,6 @@ def ica_data(dataset):
 
 
 
-    return nd3, nd4, cycles_to_loop, ab, charge_cycle, nd1, nd2
+    return nd3, nd4, cycles_to_loop, ab, charge_cycle, nd1, nd2, valpeak2_p1, valpeak2_p2, voltpeak2_1, voltpeak2_2
 
 

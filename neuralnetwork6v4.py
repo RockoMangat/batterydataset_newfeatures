@@ -1,3 +1,8 @@
+# same as neuralnetwork6v3 but adding in bayesian ridge regression
+
+from sklearn.linear_model import BayesianRidge
+from sklearn.metrics import mean_squared_error, r2_score
+
 # same as neuralnetwork6
 # train with datasets 5, 6 and 7, test on 18 only
 # use LSTM model
@@ -12,16 +17,17 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_regression
 from matplotlib import pyplot
-from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.feature_selection import r_regression, SelectKBest
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import LinearRegression
-
+from skorch import NeuralNetRegressor
+from sklearn.model_selection import GridSearchCV
+from ray import tune
+from ray.tune import CLIReporter
+from ray.tune.schedulers import ASHAScheduler
 
 
 
 # pklfiles = ['frames.pkl', 'frames2.pkl', 'frames3.pkl']
-pklfiles = ['dataset1.pkl', 'dataset2.pkl', 'dataset3.pkl', 'dataset4.pkl']
+pklfiles = ['dataset4.pkl', 'dataset3.pkl', 'dataset2.pkl', 'dataset1.pkl']
 frames = []
 
 for filename in pklfiles:
@@ -81,7 +87,7 @@ print('Shape before:', dfcomb_final.shape)
 
 # deleting certain columns/features from dataset to see if it has an impact on the model
 # dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 8, 9, 13, 15]], axis=1)
-# dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 12, 13, 15]], axis=1)
+dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 12, 13, 15]], axis=1)
 # dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[6, 7, 8, 9, 16]], axis=1)
 
 
@@ -110,8 +116,8 @@ dfcomb_final = pd.DataFrame(dfcomb_final_scaled, columns=col_names, index=row_nu
 #                                               get the x and y data:
 
 # get three different dataframes and randomise order of rows
-df_training = dfcomb_final[:-158]
-df_test = dfcomb_final.tail(158)
+df_training = dfcomb_final[:-114]
+df_test = dfcomb_final.tail(114)
 
 
 df_training = df_training.sample(frac=1, random_state=22)
@@ -134,39 +140,46 @@ print('yeee')
 
 # FIRST METHOD - https://machinelearningmastery.com/feature-selection-for-regression-data/
 
-# configure to select all features
-fs = SelectKBest(score_func=f_regression, k='all')
-# learn relationship from training data
-fs.fit(X_train, y_train)
-# transform train input data
-X_train_fs = fs.transform(X_train)
-# transform test input data
-X_test_fs = fs.transform(X_test)
-
+# # configure to select all features
+# fs = SelectKBest(score_func=f_regression, k='all')
+# # learn relationship from training data
+# fs.fit(X_train, y_train)
+# # transform train input data
+# X_train_fs = fs.transform(X_train)
+# # transform test input data
+# X_test_fs = fs.transform(X_test)
+#
 
 # what are scores for the features
-for i in range(len(fs.scores_)):
- print('Feature %d: %f' % (i, fs.scores_[i]))
-# plot the scores
-pyplot.bar([i for i in range(len(fs.scores_))], fs.scores_)
-pyplot.xticks([i for i in range(len(fs.scores_))], X_train.columns.values, rotation='vertical')
-pyplot.show()
+# for i in range(len(fs.scores_)):
+#  print('Feature %d: %f' % (i, fs.scores_[i]))
+# # plot the scores
+# pyplot.bar([i for i in range(len(fs.scores_))], fs.scores_)
+# pyplot.xticks([i for i in range(len(fs.scores_))], X_train.columns.values, rotation='vertical')
+# pyplot.show()
+#
+
+
+# SECOND METHOD - bayesian ridge regularisation
+
+# model = BayesianRidge(alpha_1=1e-6, alpha_2=1e-6)
+# model.fit(X_train, y_train)
+# y_pred = model.predict(X_test)
+#
+# mse = mean_squared_error(y_test, y_pred)
+# r2 = r2_score(y_test, y_pred)
+#
+# print('Mean squared error:', mse)
+# print('R-squared:', r2)
+#
+# model = BayesianRidge(alpha_1=1e-6, alpha_2=1e-6)
+# model.fit(X_train_fs, y_train)
+#
+# y_pred = model.predict(X_test_fs)
 
 
 
-# SECOND METHOD - https://neptune.ai/blog/feature-selection-methods
 
-# X_selection = SelectKBest(r_regression, k=3).fit_transform(X_train, y_train)
-
-# ridge regression:
-lr = LinearRegression().fit(X_train, y_train)
-
-print(f"Linear Regression-Training set score: {lr.score(X_train, y_train):.2f}")
-print(f"Linear Regression-Test set score: {lr.score(X_test, y_test):.2f}")
-
-ridge = Ridge(alpha=0.7).fit(X_train, y_train)
-print(f"Ridge Regression-Training set score: {ridge.score(X_train, y_train):.2f}")
-print(f"Ridge Regression-Test set score: {ridge.score(X_test, y_test):.2f}")
 
 
 # ------------------------- Neural network ------------------------- #
@@ -174,13 +187,13 @@ torch.manual_seed(0)
 
 class MyModule(nn.Module):
     # Initialize the parameters
-    def __init__(self, num_inputs, num_outputs, hidden_size, num_layers):
+    def __init__(self, num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=1):
         super(MyModule, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
 
 
-        self.lstm = nn.LSTM(num_inputs, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(num_inputs, hidden_size, num_layers, batch_first=True, dropout=0.2)
         self.fc1 = nn.Linear(hidden_size, num_outputs)
         self.activation = nn.ReLU()
         # self.linear = nn.Linear(hidden_size, num_outputs)
@@ -230,20 +243,22 @@ class MyModule(nn.Module):
 #         return pred
 
 
+
+
+
+
 # Instantiate the custom module
 # 6 inputs (from the features), one output (SOH) and hidden size is 19 neurons
-model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=2)
+model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=1)
 
-# Construct our loss function and an Optimizer. The call to model.parameters()
-# in the SGD constructor will contain the learnable parameters of the two
-# nn.Linear modules which are members of the model.
+
 
 # criterion = torch.nn.MSELoss(size_average=False)
 loss_fn = torch.nn.MSELoss()
 
 # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
-# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-2)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)
 
 
 # convert to pytorch tensors:
@@ -287,93 +302,168 @@ training_losses = []
 validation_losses = []
 
 val_results = []
+#
+# for epoch in range(num_epochs):
+    # batch_loss = []
+    # # training losses:
+    # for X, y in train_dataloader:
+    #     model.train()
+    #     optimizer.zero_grad()
+    #     pred = model(X)
+    #     loss = loss_fn(pred, y)
+    #     batch_loss.append(loss.item())
+    #     loss.backward()
+    #     optimizer.step()
+    # training_loss = np.mean(batch_loss)
+    # training_losses.append(training_loss)
+    #
+    # # Validation:
+    #
+    # val_results = []
+    #
+    # with torch.no_grad():
+    #     val_losses = []
+    #     model.eval()
+    #     for X, y in test_dataloader:
+    #         # model.eval()
+    #
+    #         outputs = model(X)
+    #         val_results.append(outputs.numpy())
+    #         val_loss = loss_fn(outputs, y)
+    #         val_losses.append(val_loss.item())
+    #     validation_loss = np.mean(val_losses)
+    #     validation_losses.append(validation_loss)
+    #
+    # val_results = np.concatenate(val_results, axis=0)
+    #
+    # print(f"[{epoch+1}] Training loss: {training_loss:.3f}\t Validation loss: {validation_loss:.3f}")
 
-for epoch in range(num_epochs):
+# plt.figure(1)
+# plt.plot(training_losses, label='Training Loss')
+# plt.plot(validation_losses, label='Validation Loss')
+# plt.xlabel('Epochs')
+# plt.ylabel('Loss')
+# plt.legend()
+
+
+# ------------------------- Gridsearch optimisation ------------------------- #
+# https://stackoverflow.com/questions/44260217/hyperparameter-optimization-for-pytorch-model
+
+def trainmodel(config):
+    optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'])
+
     batch_loss = []
-    # training losses:
-    for X, y in train_dataloader:
-        model.train()
-        optimizer.zero_grad()
-        pred = model(X)
-        loss = loss_fn(pred, y)
-        batch_loss.append(loss.item())
-        loss.backward()
-        optimizer.step()
-    training_loss = np.mean(batch_loss)
-    training_losses.append(training_loss)
+    for epoch in range(300):
+        # training losses:
+        for X, y in train_dataloader:
+            model.train()
+            optimizer.zero_grad()
+            pred = model(X)
+            loss = loss_fn(pred, y)
+            batch_loss.append(loss.item())
+            loss.backward()
+            optimizer.step()
+        training_loss = np.mean(batch_loss)
+        training_losses.append(training_loss)
 
-    # Validation:
+        # Validation:
 
-    val_results = []
+        val_results = []
 
-    with torch.no_grad():
-        val_losses = []
-        model.eval()
-        for X, y in test_dataloader:
-            # model.eval()
+        with torch.no_grad():
+            val_losses = []
+            model.eval()
+            for X, y in test_dataloader:
+                # model.eval()
 
-            outputs = model(X)
-            val_results.append(outputs.numpy())
-            val_loss = loss_fn(outputs, y)
-            val_losses.append(val_loss.item())
-        validation_loss = np.mean(val_losses)
-        validation_losses.append(validation_loss)
+                outputs = model(X)
+                val_results.append(outputs.numpy())
+                val_loss = loss_fn(outputs, y)
+                val_losses.append(val_loss.item())
+            validation_loss = np.mean(val_losses)
+            validation_losses.append(validation_loss)
 
-    val_results = np.concatenate(val_results, axis=0)
+        val_results = np.concatenate(val_results, axis=0)
 
-    print(f"[{epoch+1}] Training loss: {training_loss:.5f}\t Validation loss: {validation_loss:.5f}")
+        print(f"[{epoch + 1}] Training loss: {training_loss:.3f}\t Validation loss: {validation_loss:.3f}")
 
-plt.figure(1)
-plt.plot(training_losses, label='Training Loss')
-plt.plot(validation_losses, label='Validation Loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
+
+    # tune.report(mean_loss = training_loss)
+
+
+analysis = tune.run(trainmodel, config={"lr": tune.grid_search([0.001, 0.01, 0.1])})
+
+print("Best config: ", analysis.get_best_config(metric="mean_accuracy", mode='min'))
+
+
+# Get a dataframe for analyzing trial results.
+df = analysis.dataframe()
+
+print('hello')
 
 
 # ------------------------- Plot predicted values against cycle number ------------------------- #
 
-# get the inverse scaler first:
-
-# Get the scaling range for the final column of dfcomb_final
-soh_range = scaler.data_range_[-1]
-soh_min = scaler.data_min_[-1]
-
-# Unnormalize val_results
-unnormalized_val_results = val_results * soh_range + soh_min
-
-
-
-print(X_test.index, unnormalized_val_results)
-plt.figure(2)
-plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH', s=10)
-plt.xlabel('Cycle Number')
-plt.ylabel('SOH')
-plt.legend()
-
-
-# plot true results on same graph:
-with open('dfcomb_final.pkl', 'rb') as handle:
-    dfcomb_final = pickle.load(handle)
-
-# Split dataset into 4, for each
-
-# B5cycle = df3.index
-# B5charge = df3['SOH discharge 2']
-
-# B5cycle = dfcomb_final.head(167).index
-# B5charge = dfcomb_final.head(167)['Average SOH']
-
-# plt.scatter(B5cycle, B5charge, label='True SOH', s=20)
-
-# plt.scatter(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH', s=15)
-plt.scatter(dfcomb_final.tail(167).index, dfcomb_final.tail(167)['Average SOH'], label='True SOH', s=20)
-
+# # get the inverse scaler first:
+#
+# # Get the scaling range for the final column of dfcomb_final
+# soh_range = scaler.data_range_[-1]
+# soh_min = scaler.data_min_[-1]
+#
+# # Unnormalize val_results
+# # unnormalized_val_results = val_results * soh_range + soh_min
+#
+#
+#
+# print(X_test.index, unnormalized_val_results)
 # plt.figure(2)
-# plt.plot(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH')
+# plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH', s=10)
+# plt.xlabel('Cycle Number')
+# plt.ylabel('SOH')
+# plt.legend()
+#
+#
+# # plot true results on same graph:
+# with open('dfcomb_final.pkl', 'rb') as handle:
+#     dfcomb_final = pickle.load(handle)
+#
+#
+#
+# # plt.scatter(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH', s=15)
+# plt.scatter(dfcomb_final.tail(132).index, dfcomb_final.tail(132)['Average SOH'], label='True SOH', s=20)
+#
+# # plt.figure(2)
+# # plt.plot(dfcomb_final.index, dfcomb_final['Average SOH'], label='True SOH')
+#
+# plt.legend()
+#
+# plt.show()
+#
+# print('hello')
 
-plt.legend()
 
-plt.show()
 
-print('hello')
+
+# ---------- skorch - gridsearch optimisation ----------
+
+
+# modeltest = NeuralNetRegressor(module = MyModule(), max_epochs = 300, batch_size = 100)
+#
+# print(modeltest.initialize())
+#
+# param_grid = {
+#     'epochs': [150,300,450]
+# }
+#
+# grid = GridSearchCV(estimator=modeltest, param_grid=param_grid, n_jobs=-1, cv=3)
+# grid_result = grid.fit(X_train, y_train)
+#
+# # summarize results
+# print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+# means = grid_result.cv_results_['mean_test_score']
+# stds = grid_result.cv_results_['std_test_score']
+# params = grid_result.cv_results_['params']
+# for mean, stdev, param in zip(means, stds, params):
+#     print("%f (%f) with: %r" % (mean, stdev, param))
+
+
