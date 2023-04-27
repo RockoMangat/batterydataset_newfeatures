@@ -1,7 +1,7 @@
 # best model to compare results for each individual dataset with a predicted model
 
 import torch
-import torch.nn as nn
+import gpytorch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import pickle
@@ -40,8 +40,8 @@ dfcomb = dfcomb.drop(['SOH charge', 'SOH discharge'], axis=1)
 
 
 # select the original features only, which are used in the report
-dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
-# dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'ICA delta 1', 'ICA delta 2', 'Av volt discharge', 'Average SOH']]
+# dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
+dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'ICA delta 1', 'ICA delta 2', 'Av volt discharge', 'Average SOH']]
 
 
 
@@ -88,96 +88,48 @@ print(y.shape)
 print('yeee')
 
 
-# ------------------------- Neural network ------------------------- #
+# ------------------------- GPR ------------------------- # https://richardcsuwandi.medium.com/gaussian-process-regression-using-gpytorch-2c174286f9cc
 torch.manual_seed(0)
 
-# class MyModule (nn.Module):
-#     # Initialize the parameter
-#     def __init__(self, num_inputs, num_outputs, hidden_size):
-#         super(MyModule, self).__init__()
-#         self.dropout = nn.Dropout(0.2)
-#         self.linear1 = nn.Linear(num_inputs, hidden_size)
-#         self.dropout = nn.Dropout(0.2)
-#         self.linear2 = nn.Linear(hidden_size, num_outputs)
-#
-#         self.activation = nn.ReLU()
-#
-#     # Forward pass
-#     def forward(self, input):
-#         # input = self.dropout(input)
-#         lin = self.linear1(input)
-#         output = nn.functional.sigmoid(lin)
-#         # output = self.activation(lin)
-#
-#         pred = self.linear2(output)
-#         return pred
+# convert X_train and X_test to numpy arrays
 
-
-#  ---- RNN model ----
-
-# class MyModule(nn.Module):
-#     # Initialize the parameters
-#     def __init__(self, num_inputs, num_outputs, hidden_size, num_layers):
-#         super(MyModule, self).__init__()
-#         self.num_layers = num_layers
-#         self.hidden_size = hidden_size
-#
-#         self.rnn = nn.RNN(num_inputs, hidden_size, num_layers, batch_first=True)
-#
-#         self.fc = nn.Linear(hidden_size, num_outputs)
-#         self.activation = nn.ReLU()
-#
-#     # Forward pass
-#     def forward(self, input):
-#         h_0 = torch.zeros(self.num_layers, input.size(0), self.hidden_size)  # hidden state
-#
-#         output, hn = self.rnn(input, h_0)
-#         output = self.activation(output)
-#
-#         # Apply the final fully connected layer
-#         pred = self.fc(output[:, -1, :])
-#
-#
-#         return pred
+X_train_tensor = torch.tensor(X_train.values, dtype=torch.float32)
+X_test_tensor = torch.tensor(X_test.values, dtype=torch.float32)
+y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).reshape(-1, 1)
+y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32).reshape(-1, 1)
 
 
 
-#  ---- LSTM model ----
 
-class MyModule(nn.Module):
-    # Initialize the parameters
-    def __init__(self, num_inputs, num_outputs, hidden_size, num_layers):
-        super(MyModule, self).__init__()
-        self.num_layers = num_layers
-        self.hidden_size = hidden_size
-
-
-        self.lstm = nn.LSTM(num_inputs, hidden_size, num_layers, batch_first=True)
-        self.fc1 = nn.Linear(hidden_size, num_outputs)
-        self.activation = nn.ReLU()
-        # self.linear = nn.Linear(hidden_size, num_outputs)
-        self.dropout = nn.Dropout(0.2)
-        self.fc2 = nn.Linear(hidden_size, num_outputs)
-
-
+class MyModule (gpytorch.models.ExactGP):
+    # Initialize the parameter
+    def __init__(self, X_train_tensor, y_train_tensor, likelihood):
+        super(MyModule, self).__init__(X_train_tensor, y_train_tensor, likelihood)
+        self.mean = gpytorch.means.ConstantMean()  # Construct the mean function
+        self.cov = gpytorch.kernels.SpectralMixtureKernel(num_mixtures=6)  # Construct the kernel function
+        self.cov.initialize_from_data(X_train_tensor, y_train_tensor)  # Initialize the hyperparameters from data
 
     # Forward pass
     def forward(self, input):
-        h_0 = torch.zeros(self.num_layers, input.size(0), self.hidden_size)  # hidden state
-        c_0 = torch.zeros(self.num_layers, input.size(0), self.hidden_size)  # internal state
+        # Evaluate the mean and kernel function at x
+        mean_x = self.mean(input)
+        cov_x = self.cov(input)
 
-        # Propagate input through LSTM
-        output, (hn, cn) = self.lstm(input, (h_0, c_0))  # lstm with input, hidden, and internal state
+        # Reshape the mean and covariance tensors
+        # to have shape [batch_size, 1, num_mixtures]
+        mean_x = mean_x.unsqueeze(-1).expand(-1, -1, self.cov.num_mixtures)
+        cov_x = cov_x.unsqueeze(-1).expand(-1, -1, self.cov.num_mixtures)
 
-        pred = self.fc1(output[:, -1, :])
+        # Return the multivariate normal distribution using the evaluated mean and kernel function
+        return gpytorch.distributions.MultivariateNormal(mean_x, cov_x)
 
+# Initialize the likelihood and model
+likelihood = gpytorch.likelihoods.GaussianLikelihood()
+# model = MyModule(X_train_tensor, y_train_tensor, likelihood)
 
-        return pred
+model = MyModule(X_train_tensor, y_train_tensor, likelihood)
+# model = model.mean
 
-# Instantiate the custom module
-# 6 inputs (from the features), one output (SOH) and hidden size is 19 neurons
-model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=19, num_layers=1)
-# model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=19)
 
 # Construct our loss function and an Optimizer. The call to model.parameters()
 # in the SGD constructor will contain the learnable parameters of the two
@@ -189,6 +141,23 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
 # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 
+# Training loop
+model.train()
+likelihood.train()
+
+training_iterations = 500
+for i in range(training_iterations):
+    optimizer.zero_grad()
+    output = model(X_train_tensor)
+    loss = -likelihood(output, y_train_tensor).log_prob(y_train_tensor).mean()
+    loss.backward()
+    optimizer.step()
+
+    if i % 50 == 0:
+        print('Iter %d/%d - Loss: %.3f' % (i + 1, training_iterations, loss.item()))
+
+
+
 # convert to pytorch tensors:
 
 # convert X_train and X_test to numpy arrays
@@ -198,7 +167,7 @@ X_test_tensor = torch.tensor(X_test.values, dtype=torch.float32)
 y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).reshape(-1, 1)
 y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32).reshape(-1, 1)
 
-# adding another dimension for LSTM/RNN model:
+# adding another dimension for LSTM model:
 X_train_tensor = torch.reshape(X_train_tensor,   (X_train_tensor.shape[0], 1, X_train_tensor.shape[1]))
 
 X_test_tensor = torch.reshape(X_test_tensor,  (X_test_tensor.shape[0], 1, X_test_tensor.shape[1]))

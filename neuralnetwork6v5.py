@@ -84,7 +84,7 @@ print('Shape before:', dfcomb_final.shape)
 # dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 12, 13, 15]], axis=1)
 # dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[6, 7, 8, 9, 16]], axis=1)
 
-dfcomb_final = dfcomb_final[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
+# dfcomb_final = dfcomb_final[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
 
 
 
@@ -153,6 +153,7 @@ for i in range(len(fs.scores_)):
 # plot the scores
 pyplot.bar([i for i in range(len(fs.scores_))], fs.scores_)
 pyplot.xticks([i for i in range(len(fs.scores_))], X_train.columns.values, rotation='vertical')
+pyplot.ylabel('Correlation feature importance')
 pyplot.show()
 
 
@@ -177,60 +178,60 @@ torch.manual_seed(0)
 
 #  FNN
 
-class MyModule (nn.Module):
-    # Initialize the parameter
-    def __init__(self, num_inputs, num_outputs, hidden_size):
-        super(MyModule, self).__init__()
-        self.dropout = nn.Dropout(0.2)
-        self.linear1 = nn.Linear(num_inputs, hidden_size)
-        self.dropout = nn.Dropout(0.2)
-        self.linear2 = nn.Linear(hidden_size, num_outputs)
-
-        self.activation = nn.ReLU()
-
-    # Forward pass
-    def forward(self, input):
-        input = self.dropout(input)
-        lin = self.linear1(input)
-        # output = nn.functional.sigmoid(lin)
-        output = self.activation(lin)
-
-        pred = self.linear2(output)
-        return pred
+# class MyModule (nn.Module):
+#     # Initialize the parameter
+#     def __init__(self, num_inputs, num_outputs, hidden_size):
+#         super(MyModule, self).__init__()
+#         self.dropout = nn.Dropout(0.2)
+#         self.linear1 = nn.Linear(num_inputs, hidden_size)
+#         # self.dropout = nn.Dropout(0.2)
+#         self.linear2 = nn.Linear(hidden_size, num_outputs)
+#
+#         self.activation = nn.ReLU()
+#
+#     # Forward pass
+#     def forward(self, input):
+#         input = self.dropout(input)
+#         lin = self.linear1(input)
+#         # output = nn.functional.sigmoid(lin)
+#         output = self.activation(lin)
+#
+#         pred = self.linear2(output)
+#         return pred
 
 
 # LSTM
 
 
-# class MyModule(nn.Module):
-#     # Initialize the parameters
-#     def __init__(self, num_inputs, num_outputs, hidden_size, num_layers):
-#         super(MyModule, self).__init__()
-#         self.num_layers = num_layers
-#         self.hidden_size = hidden_size
-#
-#
-#         self.lstm = nn.LSTM(num_inputs, hidden_size, num_layers, batch_first=True)
-#         self.fc1 = nn.Linear(hidden_size, num_outputs)
-#         self.activation = nn.ReLU()
-#         # self.linear = nn.Linear(hidden_size, num_outputs)
-#         self.dropout = nn.Dropout(0.2)
-#         self.fc2 = nn.Linear(hidden_size, num_outputs)
-#
-#
-#
-#     # Forward pass
-#     def forward(self, input):
-#         h_0 = torch.zeros(self.num_layers, input.size(0), self.hidden_size)  # hidden state
-#         c_0 = torch.zeros(self.num_layers, input.size(0), self.hidden_size)  # internal state
-#
-#         # Propagate input through LSTM
-#         output, (hn, cn) = self.lstm(input, (h_0, c_0))  # lstm with input, hidden, and internal state
-#
-#         pred = self.fc1(output[:, -1, :])
-#
-#
-#         return pred
+class MyModule(nn.Module):
+    # Initialize the parameters
+    def __init__(self, num_inputs, num_outputs, hidden_size, num_layers):
+        super(MyModule, self).__init__()
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+
+
+        self.lstm = nn.LSTM(num_inputs, hidden_size, num_layers, batch_first=True)
+        self.fc1 = nn.Linear(hidden_size, num_outputs)
+        self.activation = nn.ReLU()
+        # self.linear = nn.Linear(hidden_size, num_outputs)
+        self.dropout = nn.Dropout(0.2)
+        self.fc2 = nn.Linear(hidden_size, num_outputs)
+
+
+
+    # Forward pass
+    def forward(self, input):
+        h_0 = torch.zeros(self.num_layers, input.size(0), self.hidden_size)  # hidden state
+        c_0 = torch.zeros(self.num_layers, input.size(0), self.hidden_size)  # internal state
+
+        # Propagate input through LSTM
+        output, (hn, cn) = self.lstm(input, (h_0, c_0))  # lstm with input, hidden, and internal state
+
+        pred = self.fc1(output[:, -1, :])
+
+
+        return pred
 
 
 
@@ -295,8 +296,8 @@ class MyModule (nn.Module):
 
 # Instantiate the custom module
 # x num inputs (from the features), one output (SOH) and hidden size is 19 neurons
-# model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=2)
-model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=19)
+model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=1)
+# model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=19)
 
 
 # Construct our loss function and an Optimizer. The call to model.parameters()
@@ -307,9 +308,9 @@ model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=19)
 loss_fn = torch.nn.MSELoss()
 
 # optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
-# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-2)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)
 # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
+# optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
 
 
 # convert to pytorch tensors:
@@ -414,7 +415,7 @@ print(X_test.index, unnormalized_val_results)
 plt.figure(2)
 plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH', s=10)
 plt.xlabel('Cycle Number')
-plt.ylabel('SOH')
+plt.ylabel('SOH %')
 plt.legend()
 
 
