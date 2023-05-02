@@ -1,4 +1,5 @@
 # same as GPRv6 clean but aimed to implement batches too with dataloader
+# includes MSE
 
 import torch
 import gpytorch
