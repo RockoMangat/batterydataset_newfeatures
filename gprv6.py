@@ -129,8 +129,8 @@ class ExactGPModel(gpytorch.models.ExactGP):
 
 
     def forward(self, x):
-        self.train()
-        self.likelihood.train()
+        # self.train()
+        # self.likelihood.train()
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
         latent_pred = gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
@@ -144,11 +144,13 @@ class ExactGPModel(gpytorch.models.ExactGP):
 
 X_train_tensor = torch.tensor(X_train.values, dtype=torch.float32)
 X_test_tensor = torch.tensor(X_test.values, dtype=torch.float32)
-y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).reshape(-1, 1)
-y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32).reshape(-1, 1)
+# y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).reshape(-1, 1)
+# y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32).reshape(-1, 1)
 
+ydfdsf = torch.randn((10))
 
-
+y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32)
+y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32)
 # training and test data
 # train_dataloader = DataLoader(list(zip(X_train_tensor, y_train_tensor)), batch_size=32)
 
@@ -181,9 +183,9 @@ likelihood.train()
 
 loss_fn = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 # Training model test:
-num_epochs = 200
+num_epochs = 800
 training_losses = []
 validation_losses = []
 
@@ -223,7 +225,7 @@ for epoch in range(num_epochs):
     # pred = model(X)
     pred = model(X_train_tensor)
 
-    loss = -loss_fn(pred, y)
+    loss = -loss_fn(pred, y_train_tensor)
     batch_loss.append(loss.mean().item())
     loss.sum().backward()
     optimizer.step()
@@ -237,16 +239,19 @@ for epoch in range(num_epochs):
     with torch.no_grad():
         val_losses = []
         model.eval()
-        # outputs = model(y_train_tensor)
+        likelihood.eval()
+        # outputs = model(X_train_tensor)
         outputs = model(X_test_tensor)
 
-        val_results.append(outputs.numpy())
-        val_loss = loss_fn(outputs, y)
+        # val_results.append(outputs.numpy())
+        val_loss = -loss_fn(outputs, y_test_tensor)
         val_losses.append(val_loss.item())
         validation_loss = np.mean(val_losses)
         validation_losses.append(validation_loss)
 
-    val_results = np.concatenate(val_results, axis=0)
+        observed_pred = likelihood(model(X_test_tensor))
+
+    # val_results = np.concatenate(val_results, axis=0)
 
     print(f"[{epoch+1}] Training loss: {training_loss:.5f}\t Validation loss: {validation_loss:.5f}")
 
@@ -273,7 +278,7 @@ soh_min = scaler.data_min_[-1]
 
 
 # print(X_test.index, unnormalized_val_results)
-plt.figure(2)
+# plt.figure(2)
 # plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH')
 # plt.scatter(X_test.index, f_preds, label='Predicted SOH')
 
@@ -284,7 +289,7 @@ plt.legend()
 
 
 # plot true results on same graph:
-plt.scatter(dfcomb.index, dfcomb['Average SOH'], label='True SOH')
+# plt.scatter(dfcomb.index, dfcomb['Average SOH'], label='True SOH')
 # plt.title('Battery B0007')
 plt.legend()
 
@@ -292,5 +297,26 @@ plt.legend()
 plt.show()
 
 
+
+# plot attempt
+
+
+with torch.no_grad():
+
+    a = observed_pred.mean.reshape(-1,1)
+    unnormalized_val_results = a * soh_range + soh_min
+
+    plt.figure(2)
+
+    plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH')
+
+    # plot true results on same graph:
+    plt.scatter(dfcomb.index, dfcomb['Average SOH'], label='True SOH')
+    # plt.title('Battery B0007')
+
+    plt.xlabel('Cycle Number')
+    plt.ylabel('SOH %')
+    plt.legend()
+    plt.show()
 
 print('hello')
