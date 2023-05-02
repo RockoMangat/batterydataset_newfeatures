@@ -46,8 +46,8 @@ dfcomb = dfcomb.drop(['SOH charge', 'SOH discharge'], axis=1)
 
 
 # select the original features only, which are used in the report
-# dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'ICA delta 1', 'ICA delta 2', 'Av volt discharge', 'Average SOH']]
-dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
+dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'ICA delta 1', 'ICA delta 2', 'Av volt discharge', 'Average SOH']]
+# dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
 
 
 
@@ -175,7 +175,7 @@ likelihood = gpytorch.likelihoods.GaussianLikelihood()
 
 
 # Training model test:
-num_epochs = 550
+num_epochs = 100
 training_losses = []
 validation_losses = []
 
@@ -198,12 +198,21 @@ validation_losses = []
 
 val_results = []
 observed_pred = []
+trainmse = []
+valmse = []
 
 for epoch in range(num_epochs):
     batch_loss = []
+    train_batchloss = []
 
     for X, y in train_dataloader:
         model = ExactGPModel(X, y, likelihood)
+
+        # get MSE before training:
+        model.eval()
+        untrained_pred = likelihood(model(X))
+        train_mse = gpytorch.metrics.mean_squared_error(untrained_pred, y, squared=True)
+        train_batchloss.append(train_mse.mean().item())
 
         # training mode
         model.train()
@@ -211,7 +220,8 @@ for epoch in range(num_epochs):
 
         loss_fn = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        # optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
 
         # training losses:
         optimizer.zero_grad()
@@ -226,7 +236,10 @@ for epoch in range(num_epochs):
     training_loss = np.mean(batch_loss)
     training_losses.append(training_loss)
 
- # Validation:
+    train_loss_new = np.mean(train_batchloss)
+    trainmse.append(train_loss_new)
+
+    # Validation:
 
     val_results = []
 
@@ -240,6 +253,8 @@ for epoch in range(num_epochs):
 
             # val_results.append(outputs.numpy())
             observed_pred = likelihood(model(X))
+            # get MSE:
+            val_mse = gpytorch.metrics.mean_squared_error(observed_pred, y, squared=True)
             observed_pred = observed_pred.mean.reshape(-1, 1)
             val_results.append(observed_pred.numpy())
 
@@ -248,14 +263,16 @@ for epoch in range(num_epochs):
         validation_loss = np.mean(val_losses)
         validation_losses.append(validation_loss)
 
+        valmse.append(val_mse.numpy())
+
 
     val_results = np.concatenate(val_results, axis=0)
 
-    print(f"[{epoch+1}] Training loss: {training_loss:.5f}\t Validation loss: {validation_loss:.5f}")
+    print(f"[{epoch+1}] Training loss: {training_loss:.5f}\t Validation loss: {validation_loss:.5f}\t Training MSE: {train_mse:.7f}\t Validation MSE: {val_mse:.7f}")
 
 plt.figure(1)
-plt.plot(training_losses, label='Training Loss')
-plt.plot(validation_losses, label='Validation Loss')
+plt.plot(trainmse, label='Training Loss')
+plt.plot(valmse, label='Validation Loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
@@ -274,7 +291,7 @@ with torch.no_grad():
 
     unnormalized_val_results = val_results * soh_range + soh_min
 
-    plt.figure(2)
+    plt.figure(3)
 
     # plot predicted results
     plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH', marker='.')
