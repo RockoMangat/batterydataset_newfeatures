@@ -1,4 +1,4 @@
-# best model to compare results for each individual dataset with a predicted model
+# best model to compare results for each individual dataset with a predicted model for GPR
 
 import torch
 import gpytorch
@@ -183,19 +183,19 @@ training_losses = []
 validation_losses = []
 
 # GPytorch documentation method for training:
-for epoch in range(num_epochs):
-    # Zero gradients from previous iteration
-    optimizer.zero_grad()
-    # Output from model
-    pred = model(X_train_tensor)
-    loss = -loss_fn(pred, y_train_tensor)
-    loss.mean().backward()
-    print('Iter %d/%d - Loss: %.3f   lengthscale: %.3f   noise: %.3f' % (
-        epoch + 1, num_epochs, loss.mean().item(),
-        model.covar_module.base_kernel.lengthscale.item(),
-        model.likelihood.noise.item()
-    ))
-    optimizer.step()
+# for epoch in range(num_epochs):
+#     # Zero gradients from previous iteration
+#     optimizer.zero_grad()
+#     # Output from model
+#     pred = model(X_train_tensor)
+#     loss = -loss_fn(pred, y_train_tensor)
+#     loss.mean().backward()
+#     print('Iter %d/%d - Loss: %.3f   lengthscale: %.3f   noise: %.3f' % (
+#         epoch + 1, num_epochs, loss.mean().item(),
+#         model.covar_module.base_kernel.lengthscale.item(),
+#         model.likelihood.noise.item()
+#     ))
+#     optimizer.step()
 
 
 

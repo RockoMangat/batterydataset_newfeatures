@@ -47,8 +47,8 @@ dfcomb = dfcomb.drop(['SOH charge', 'SOH discharge'], axis=1)
 
 
 # select the original features only, which are used in the report
-dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'ICA delta 1', 'ICA delta 2', 'Av volt discharge', 'Average SOH']]
-# dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
+# dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'ICA delta 1', 'ICA delta 2', 'Av volt discharge', 'Average SOH']]
+dfcomb = dfcomb[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
 
 
 
@@ -110,10 +110,10 @@ X_test_fs = fs.transform(X_test)
 for i in range(len(fs.scores_)):
  print('Feature %d: %f' % (i, fs.scores_[i]))
 # plot the scores
-# pyplot.bar([i for i in range(len(fs.scores_))], fs.scores_)
-# pyplot.xticks([i for i in range(len(fs.scores_))], X_train.columns.values, rotation='vertical')
-# pyplot.ylabel('Correlation feature importance')
-# pyplot.show()
+pyplot.bar([i for i in range(len(fs.scores_))], fs.scores_)
+pyplot.xticks([i for i in range(len(fs.scores_))], X_train.columns.values, rotation='vertical')
+pyplot.ylabel('Correlation feature importance')
+pyplot.show()
 
 
 
@@ -176,7 +176,7 @@ likelihood = gpytorch.likelihoods.GaussianLikelihood()
 
 
 # Training model test:
-num_epochs = 100
+num_epochs = 500
 training_losses = []
 validation_losses = []
 
@@ -292,7 +292,7 @@ with torch.no_grad():
 
     unnormalized_val_results = val_results * soh_range + soh_min
 
-    plt.figure(3)
+    plt.figure(2)
 
     # plot predicted results
     plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH', marker='.')
@@ -306,5 +306,23 @@ with torch.no_grad():
     plt.ylabel('SOH %')
     plt.legend()
     plt.show()
+
+
+# store values to plot in new script - GPR followed by true SOH
+gprpred2a_plot = {}
+gprpred2a_plot[0] = unnormalized_val_results
+gprpred2a_plot[1] = X_test.index
+
+with open("gprpred2a_plot", "wb") as fp:   #Pickling
+    pickle.dump(gprpred2a_plot, fp)
+
+
+# true SOH:
+true2a_plot = {}
+true2a_plot[0] = dfcomb['Average SOH']
+true2a_plot[1] = dfcomb.index
+
+with open("true2a_plot", "wb") as f:   #Pickling
+    pickle.dump(true2a_plot, f)
 
 print('hello')
