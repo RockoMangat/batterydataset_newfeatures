@@ -1,6 +1,6 @@
 # same as neuralnetwork6
-# train with datasets 5, 6 and 7, test on 18 only
-# use LSTM model
+# train with datasets 6, 7, 18 and test on 5 only
+# use for test 3
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -22,6 +22,8 @@ from sklearn.linear_model import LinearRegression
 
 # pklfiles = ['frames.pkl', 'frames2.pkl', 'frames3.pkl']
 pklfiles = ['dataset1.pkl', 'dataset2.pkl', 'dataset3.pkl', 'dataset4.pkl']
+# pklfiles = ['dataset4.pkl', 'dataset3.pkl', 'dataset2.pkl', 'dataset1.pkl']
+
 frames = []
 
 for filename in pklfiles:
@@ -79,12 +81,15 @@ with open('dfcomb_final.pkl', 'wb') as handle:
 print('Shape before:', dfcomb_final.shape)
 
 
-# deleting certain columns/features from dataset to see if it has an impact on the model
-# dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 8, 9, 13, 15]], axis=1)
-# dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[0, 2, 3, 4, 5, 12, 13, 15]], axis=1)
-# dfcomb_final = dfcomb_final.drop(dfcomb_final.columns[[6, 7, 8, 9, 16]], axis=1)
 
-# dfcomb_final = dfcomb_final[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
+dfcomb_final = dfcomb_final[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Average SOH']]
+# dfcomb_final = dfcomb_final.drop(['Max ICA of 2nd peak', 'Max ICA of 2nd peak voltage', 'Max ICA (2nd)', 'Max ICA voltage (2nd)', 'Max temp time'], axis=1)
+
+# --------****** showing improvements, with 1) areas, and 2) max temperature time and 3) areas and max temperature time ******----------
+
+# dfcomb_final = dfcomb_final[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'area1', 'area2', 'area3', 'area4', 'Average SOH']]
+# dfcomb_final = dfcomb_final[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'Max temp time', 'Average SOH']]
+# dfcomb_final = dfcomb_final[['Av volt charge', 'Charge time', 'Voltage fixedtime', 'Max ICA', 'Max ICA voltage', 'Av volt discharge', 'area1', 'area2', 'area3', 'area4', 'Max temp time', 'Average SOH']]
 
 
 
@@ -113,8 +118,10 @@ dfcomb_final = pd.DataFrame(dfcomb_final_scaled, columns=col_names, index=row_nu
 #                                               get the x and y data:
 
 # get three different dataframes and randomise order of rows
-df_training = dfcomb_final[:-158]
-df_test = dfcomb_final.tail(158)
+df_training = dfcomb_final[:-167]
+df_test = dfcomb_final.tail(167)
+# df_training = dfcomb_final[:-129]
+# df_test = dfcomb_final.tail(129)
 
 
 df_training = df_training.sample(frac=1, random_state=22)
@@ -296,7 +303,7 @@ class MyModule(nn.Module):
 
 # Instantiate the custom module
 # x num inputs (from the features), one output (SOH) and hidden size is 19 neurons
-model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=1)
+model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=128, num_layers=2)
 # model = MyModule(num_inputs=len(X_train.columns), num_outputs=1, hidden_size=19)
 
 
@@ -410,8 +417,7 @@ soh_min = scaler.data_min_[-1]
 unnormalized_val_results = val_results * soh_range + soh_min
 
 
-
-print(X_test.index, unnormalized_val_results)
+# print(X_test.index, unnormalized_val_results)
 plt.figure(2)
 plt.scatter(X_test.index, unnormalized_val_results, label='Predicted SOH', s=10)
 plt.xlabel('Cycle Number')
@@ -443,4 +449,42 @@ plt.legend()
 
 plt.show()
 
-print('hello')
+
+
+# store values to plot in new script
+#  if FNN:
+
+# datapred1_plot = {}
+# datapred1_plot[0] = unnormalized_val_results
+# datapred1_plot[1] = X_test.index
+#
+# with open("datapred1", "wb") as fp:   #Pickling
+#     pickle.dump(datapred1_plot, fp)
+
+# #  if RNN:
+
+# datapred2_plot = {}
+# datapred2_plot[0] = unnormalized_val_results
+# datapred2_plot[1] = X_test.index
+#
+# with open("datapred2", "wb") as fp:   #Pickling
+#     pickle.dump(datapred2_plot, fp)
+
+#
+#  if LSTM:
+
+datapred3_plot = {}
+datapred3_plot[0] = unnormalized_val_results
+datapred3_plot[1] = X_test.index
+
+with open("datapred3", "wb") as fp:   #Pickling
+    pickle.dump(datapred3_plot, fp)
+# #
+#
+# true SOH:
+true3_plot = {}
+true3_plot[0] = dfcomb_final.tail(167)['Average SOH']
+true3_plot[1] = dfcomb_final.tail(167).index
+
+with open("true3_plot", "wb") as f:   #Pickling
+    pickle.dump(true3_plot, f)
