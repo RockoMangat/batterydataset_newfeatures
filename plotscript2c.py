@@ -1,5 +1,6 @@
 import pickle
 import matplotlib.pyplot as plt
+import numpy as np
 
 with open("fnnpred2c_plot", "rb") as fp:   #Pickling
     a = pickle.load(fp)
@@ -44,14 +45,26 @@ cycles_gpr, gpr = zip(*sorted(zip(cycles_gpr, gpr)))
 
 
 # connected plot
-plt.figure(2)
+plt.figure(figsize=(7, 5.5))
 
-# scatter plot with markers
-plt.scatter(cycles_fnn, fnn, label='FNN', marker='.')
-plt.scatter(cycles_rnn, rnn, label='RNN', marker='.', color='purple')
-plt.scatter(cycles_lstm, lstm, label='LSTM', marker='.')
-plt.scatter(cycles_gpr, gpr, label='GPR', marker='.')
+# multiply by 100 for SOH %
+fnn = np.asarray(fnn)*100
+rnn = np.asarray(rnn)*100
+lstm = np.asarray(lstm)*100
+gpr = np.asarray(gpr)*100
+true = np.asarray(true)*100
 
+## scatter plot with markers 1
+# plt.scatter(cycles_fnn, fnn, label='FNN', marker='.')
+# plt.scatter(cycles_rnn, rnn, label='RNN', marker='.', color='purple')
+# plt.scatter(cycles_lstm, lstm, label='LSTM', marker='.')
+# plt.scatter(cycles_gpr, gpr, label='GPR', marker='.')
+
+# second set of markers 2
+plt.scatter(cycles_fnn, fnn, label='FNN', marker='.', s=45)
+plt.scatter(cycles_rnn, rnn, label='RNN', marker='*', color='purple', s=35)
+plt.scatter(cycles_lstm, lstm, label='LSTM', marker='x', s=30)
+plt.scatter(cycles_gpr, gpr, label='GPR', marker='d', s=20)
 
 plt.plot(cycles_true, true, label='True SOH', color='red')
 plt.xlabel('Cycle Number')

@@ -2,21 +2,21 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
-with open("fnnpred2b_plot", "rb") as fp:   #Pickling
+with open("fnnpred3_plot", "rb") as fp:   #Pickling
     a = pickle.load(fp)
 
 print('test')
-with open("rnnpred2b_plot", "rb") as fp:   #Pickling
+with open("rnnpred3_plot", "rb") as fp:   #Pickling
     b = pickle.load(fp)
 
-with open("lstmpred2b_plot", "rb") as fp:   #Pickling
+with open("lstmpred3_plot", "rb") as fp:   #Pickling
     c = pickle.load(fp)
 
-with open("gprpred2b_plot", "rb") as fp:   #Pickling
+with open("gprpred3_plot", "rb") as fp:   #Pickling
     d = pickle.load(fp)
 
 # open true SOH data values:
-with open("true2b_plot.pkl", "rb") as fp:   #Pickling
+with open("true3_plot", "rb") as fp:   #Pickling
     e = pickle.load(fp)
 
 # get pred and cycle values for models
@@ -54,7 +54,6 @@ lstm = np.asarray(lstm)*100
 gpr = np.asarray(gpr)*100
 true = np.asarray(true)*100
 
-
 ## scatter plot with markers 1
 # plt.scatter(cycles_fnn, fnn, label='FNN', marker='.')
 # plt.scatter(cycles_rnn, rnn, label='RNN', marker='.', color='purple')
@@ -72,5 +71,7 @@ plt.xlabel('Cycle Number')
 plt.ylabel('SOH %')
 plt.legend()
 plt.show()
+
+
 
 print('test')
